@@ -251,5 +251,49 @@ submission
 
 vroom_write(submission, file = './stack_nb_pen_log.csv', delim = ",")
 
+# BART --------------------------------------------------------------------
+# Create Model
+bart_mod <- parsnip::bart(trees = tune()) %>% 
+  set_engine("dbarts") %>% 
+  set_mode("classification")
+
+# Create workflow
+bart_wf <- workflow() %>%
+  add_recipe(my_recipe) %>%
+  add_model(bart_mod)
+
+# Tuning Grid
+bart_tuning_grid <- grid_regular(trees(),
+                                 levels = 5)
+
+# Create folds
+bart_folds <- vfold_cv(train, v = 5, repeats = 1)
+
+# Cross Validation
+CV_results <- bart_wf %>%
+  tune_grid(resamples = bart_folds,
+            grid = bart_tuning_grid,
+            metrics = metric_set(accuracy))
+
+# Find the best tune for parameters
+bart_bestTune <- CV_results %>%
+  select_best("accuracy")
+
+# Finalize workflow
+final_bart_wf <- bart_wf %>%
+  finalize_workflow(bart_bestTune) %>%
+  fit(data = train)
+
+# Predict and format
+kicked_predictions <- final_bart_wf %>% 
+  predict(new_data = test, type = 'prob') %>% 
+  bind_cols(test) %>% 
+  rename(IsBadBuy = .pred_1) %>% 
+  select(RefId, IsBadBuy)
+
+# View predictions
+kicked_predictions
+
+#vroom_write(kicked_predictions, file = './submission.csv', delim = ",")
 
 
