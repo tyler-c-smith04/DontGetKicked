@@ -40,8 +40,10 @@ my_recipe <- recipe(IsBadBuy ~ ., data = train) %>%
   step_zv() %>%
   step_normalize(all_numeric_predictors())
 
-prepped_recipe <- prep(balance_recipe)
+prepped_recipe <- prep(my_recipe)
 baked <- bake(prepped_recipe, new_data = train)
+
+dropped_columns <- setdiff(names(train), names(baked))
 
 na_count_baked <- baked %>%
   summarise_all(~sum(is.na(.)))
